@@ -1,0 +1,25 @@
+<!-- TEMPORARY TEMPLATE. AFTER CONFIGURING DATABASE DELETE THIS FILE FOR REGULAR DJANGO ADMIN PORTAL TO RENDER -->
+
+{% extends "admin/base.html" %} 
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .h1-custom {
+            font-size: 20px !important;
+            color: red;
+            z-index: 9999;
+            padding: 2rem;
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}
+
+{% block branding %}
+    <h1 class="h1-custom" style="background-color: white;">
+        The Database has not been configured. Please create and configure backend DB before attempting to access the admin portal
+    </h1>
+    {{ block.super }}
+{% endblock %}
+{% block nav-global %}
+{% endblock %}

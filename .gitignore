@@ -1,0 +1,11 @@
+.env
+.venv/
+venv/
+.vscode/
+*.pyc
+*.pyo
+*.png
+*.jpg
+*.jpeg
+*.zip
+logs.txt
