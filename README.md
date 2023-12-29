@@ -11,4 +11,6 @@ Base template for client websites. Everything is configured and ready to go with
 `parent_dir/` ----> `python_env/` `my_new_website/`
 - now within `my_new_website/` is this template's source that you can begin to alter to build your website. Make sure you add a Django backend `.env` file within this directory: `my_new_website/`, and add the VueJS frontend `.env` file here: `my_new_website/frontend`. Don't worry, this template is already set up to look at these specific locations for the .env files
 
+- read the frontend and backend `README.md` files for setup guides as well as the guides found in `servers_ssl_db_setup` for web server and SSL cert config
+
 That's it! Happy Coding 🤠
