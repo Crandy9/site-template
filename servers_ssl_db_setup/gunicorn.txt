@@ -1,0 +1,113 @@
+*** 
+
+	GUNICORN
+	https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu-22-04
+
+
+*** 
+(should already be installed by now, else activate env and pip install gunicorn)
+
+- make sure you have the production repo cloned and .env file populated with 
+required env vars. Get env vars from me.
+
+Start by creating and opening a systemd socket file for Gunicorn with sudo privileges:
+sudo nano /etc/systemd/system/yourgunicorn.socket
+
+- place this in the file
+Unit section describes the type of socket, socket section defines socket location, and install section assigns target:
+
+```
+[Unit]
+Description=gunicorn socket for local app development
+
+[Socket]
+ListenStream=/run/yourgunicorn.sock
+# Our service won't need permissions for the socket, since it
+# inherits the file descriptor by socket activation
+# only the nginx daemon will need access to the socket
+# Optionally restrict the socket permissions even more.
+# SocketMode=600
+
+[Install]
+WantedBy=sockets.target
+```
+
+
+- next, set up gunicorn.service 
+- make sure the Django wsgi.py and maing project settings.py is the correct main_project name
+sudo nano /etc/systemd/system/yourgunicorn.service
+- place this in the file
+- for ExecStart param: copy/paste the gunicorn path by activating python env and entering `which gunicorn`:
+/home/lctec/env/bin/gunicorn
+
+(Unit section specify metadata and dependencies
+Service section specify user and group, and the unix socket located at /run/yourgunicorn.sock)
+
+
+```
+[Unit]
+Description=gunicorn daemon
+Requires=yourgunicorn.socket
+After=network.target
+
+[Service]
+User=lctec
+Group=lctec
+WorkingDirectory=/path/to/manage.py
+ExecStart=/path/to/python/env's/gunicorn \
+	  --access-logfile /var/www/sites/sc/gunicorn_logs/access.log \
+      --error-logfile /var/www/sites/sc/gunicorn_logs/error.log \
+	  --workers 3 \
+	  --bind unix:/run/yourgunicorn.sock  your_main_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+```
+
+
+- enable the service
+sudo systemctl enable yourgunicorn.service
+- should see 
+`Created symlink /etc/systemd/system/multi-user.target.wants/yourgunicorn.service → /etc/systemd/system/yourgunicorn.service.`
+- start the service
+sudo systemctl start yourgunicorn.service
+
+
+- start and enable Gunicorn socket:
+sudo systemctl enable yourgunicorn.socket
+sudo systemctl start yourgunicorn.socket
+
+This should create .sock file loated here: /run/yourgunicorn.sock
+- checking socket file status (should say active):
+sudo systemctl status yourgunicorn.socket
+
+- check for sock file within /run dir:
+file /run/yourgunicorn.sock
+should return: 
+/run/yourgunicorn.sock: socket
+
+- check gunicorn status:
+sudo systemctl status yourgunicorn
+
+- If you make changes to the /etc/systemd/system/gunicorn.service file, 
+reload the daemon to reread the service definition and restart the Gunicorn process by typing:
+sudo systemctl daemon-reload
+sudo systemctl restart yourgunicorn
+sudo systemctl status yourgunicorn
+- if something is disabled or wrong, check logs with:
+sudo journalctl -u yourgunicorn
+- if No such file or directory error for gunicorn.service,
+activate python env and run and ensure the path is correct in the .service file
+
+- paste that path into the ExecStart value loacted at 
+sudo nano /etc/systemd/system/gunicorn.service
+
+- pkill gunicorn kills all workers and processes
+* LOGGING *
+loglevles: 
+'debug'
+'info'
+'warning'
+'error'
+'critical'

@@ -1,0 +1,292 @@
+*** 
+
+        CONFIGURE HTTPS TLS/SSL for nginx 
+        
+***
+
+
+*** PRODUCTION TLS/SSL certs through Let's Encrypt/Certbot (for production, purchase sheriffcrandymusic.com first):*** 
+https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-22-04
+- make sure the production repo and all libraries dependencies are setup, configured nginx and gunicorn first
+- if you have already previously copy/pasted the .conf file with the 
+listen 443 ssl lines
+ssl_certificate and
+ssl_certificate_key directives, comment those out since you haven't created the
+SSL certs yet
+- also ensure config file's cache directory and error log dirs are created:
+sudo mkdir /var/cache/nginx
+sudo mkdir /var/cache/nginx/sheriffcrandycache
+sudo mkdir /etc/nginx/sc_logs
+- make sure you can get this or else go back and reconfigure nginx (ignore warnings about .80 for now):
+sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+- set up sudo-enabled non-root user
+- purchase domain name (namecheap, godaddy, etc.)
+- An A record with example.com pointing to your server’s public IP address.
+- An A record with www.example.com pointing to your server’s public IP address.
+- install snap package
+sudo snap install core
+sudo snap refresh core
+
+- remove cert bot if it's already installed
+sudo apt remove certbot
+- install certbot
+sudo snap install --classic certbot
+- place certbot in path
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+- navigate to nginx sites-available sheriffcrandy.conf dir
+cd /etc/nginx/sites-available
+- open sheriffcrandy.conf file
+sudo nano /etc/nginx/sites-available/sheriffcrandy.conf
+- find server name block and verify sheriffcrandymusic.com and
+www.sheriffcrandymusic.com is there
+- if it's not there, go add it (see nginx config instructions above)
+- reload nginx:
+sudo systemctl reload nginx
+- allow firewall access (this should already be accomplished)
+sudo ufw status
+- should return:
+Output
+Status: active
+
+To                         Action      From
+--                         ------      ----
+OpenSSH                    ALLOW       Anywhere
+Nginx Full                 ALLOW       Anywhere
+OpenSSH (v6)               ALLOW       Anywhere (v6)
+Nginx Full (v6)            ALLOW       Anywhere (v6)
+
+- install and obtain SSL Cert (nginx does all the heavy-lifting):
+sudo certbot --nginx -d sheriffcrandymusic.com -d www.sheriffcrandymusic.com
+- enter recovery email: lctechnology@protonmail.com
+- agree to terms of service
+- say No to sharing email
+- should say account registered
+and requesting certificate for sheriffcrandymusic.com and www.sheriffcrandymusic.com
+- should receive success messages:
+Deploying certificate
+Successfully deployed certificate for sheriffcrandymusic.com to /etc/nginx/sites-enabled/sheriffcrandy.conf
+Successfully deployed certificate for www.sheriffcrandymusic.com to /etc/nginx/sites-enabled/sheriffcrandy.conf
+Congratulations! You have successfully enabled HTTPS on https://sheriffcrandymusic.com and https://www.sheriffcrandymusic.com
+- will automatically add these lines to conf file:
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/sheriffcrandymusic.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/sheriffcrandymusic.com/privkey.pem; # managed by Certb>
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+- and these lines in the port 80 block
+(be careful of certbot adding another server block by mistake):
+    if ($host = www.sheriffcrandymusic.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = sheriffcrandymusic.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+- debug log:
+var/log/letsencrypt/letsencrypt.log
+- SSL cert locations:
+Certificate is saved at: /etc/letsencrypt/live/sheriffcrandymusic.com/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/sheriffcrandymusic.com/privkey.pem
+- will automatically update certs when expiration date comes
+- query certbot service to check time of auto SSL-cert renewal:
+sudo systemctl status snap.certbot.renew.service
+- do a dry run of renewal to simulate renewal process:
+sudo certbot renew --dry-run
+- refresh website. HTTPS warnings should be gone
+
+*** PRODUCTION TLS/SSL certs through Let's Encrypt/Certbot (for production, sheriffcrandymusic.com):***
+
+https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-22-04
+- set up sudo-enabled non-root user
+- purchase domain name (namecheap, godaddy, etc.)
+- An A record with example.com pointing to your server’s public IP address.
+- An A record with www.example.com pointing to your server’s public IP address.
+- install snap package
+sudo snap install core
+sudo snap refresh core
+
+- remove cert bot if it's already installed
+sudo apt remove certbot
+- install certbot
+sudo snap install --classic certbot
+- place certbot in path
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+- navigate to nginx sites-available yournginxconfig.conf dir
+cd /etc/nginx/sites-available
+- open yournginxconfig.conf file
+sudo nano /etc/nginx/sites-available/yournginxconfig.conf
+- find server name block and verify sheriffcrandymusic.com and
+www.sheriffcrandymusic.com is there
+- if it's not there, go add it (see nginx config instructions above)
+- reload nginx:
+sudo systemctl reload nginx
+- allow firewall access (this should already be accomplished)
+sudo ufw status
+- should return:
+Output
+Status: active
+
+To                         Action      From
+--                         ------      ----
+OpenSSH                    ALLOW       Anywhere
+Nginx Full                 ALLOW       Anywhere
+OpenSSH (v6)               ALLOW       Anywhere (v6)
+Nginx Full (v6)            ALLOW       Anywhere (v6)
+
+- install and obtain SSL Cert (nginx does all the heavy-lifting):
+sudo certbot --nginx -d example.com -d www.example.com
+- enter recovery email:
+- agree to terms of service
+- say No to sharing email
+- should receive success messages
+- debug log:
+var/log/letsencrypt/letsencrypt.log
+- SSL cert locations:
+Certificate is saved at: /etc/letsencrypt/live/sheriffcrandymusic.com/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/sheriffcrandymusic.com/privkey.pem
+- will automatically update certs when expiration date comes
+- query certbot service to check time of auto SSL-cert renewal:
+sudo systemctl status snap.certbot.renew.service
+- do a dry run of renewal to simulate renewal process:
+sudo certbot renew --dry-run
+- refresh website. HTTPS warnings should be gone
+
+
+
+
+
+
+
+
+
+
+*** DEVEOPMENT Self-signed TLS cert (for local development):  ***
+https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-22-04
+
+
+ssl location: /etc/ssl
+- create self-signed key and certificate pair with OpenSSL command 
+(again, name can be whatever you want, but remember the name and location of these certificates, you'll need them below):
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/your_self_signed.key -out /etc/ssl/certs/your_self_signed.crt
+NODES FLAG IS VERY IMPORTAT- IT BYPASSES PASPHRASE REQ SO NGINX CAN READ THE FILE ON ITS OWN
+
+self-signed key located at /etc/ssl/private
+certificate located at /etc/ssl/certs
+
+follow prompts: 
+- Country name: country code (ex JP)
+- State/Province: state (ex Arizona)
+- Locality Name: Whatever you want
+- Organization Name: Your Fake Org Name
+- Organizational Unit Name: Your Fake Org Unit Name
+- Common Name *** IMPORTANT ***: use /etc/hosts name you created in nginx setup and don't use the same Common Name for
+subsequent SSL certs you create in the futute(e.g. myownwebsite.local)
+- email address: your-email.com
+
+- after key-pairs are created, create strong Diffie-Hellman group (DH) droup for negotiating Perfect Forward Secrecy with clients 
+(takes awhile to complete, a few minutes) 
+this is added to the ssl-params.conf file below (wil be shared by all websites, so you only have to run this once on your system):
+
+sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
+
+- create configuration snippet file for nginx pointing to ssl key and certificate you made above (create a new conf file
+for each new website you create. The websites will share the ssl-params.conf file but have separate self-signed.conf params)
+sudo nano /etc/nginx/snippets/yoursite-self-signed.conf
+and enter:
+
+```
+ssl_certificate /etc/ssl/certs/your_self_signed.crt;
+ssl_certificate_key /etc/ssl/private/your_self_signed.key;
+```
+
+- Create a Configuration Snippet with Strong Encryption Settings 
+(ONLY NEED TO DO THIS FOR THE FIRST TIME. DONT DO IT AGAIN IF YOU ALREADY HAVE COMPLETED THIS BEFORE)
+sudo nano /etc/nginx/snippets/ssl-params.conf
+and add this:
+
+```
+ssl_protocols TLSv1.3;
+ssl_prefer_server_ciphers on;
+ssl_dhparam /etc/nginx/dhparam.pem; 
+ssl_ciphers EECDH+AESGCM:EDH+AESGCM;
+ssl_ecdh_curve secp384r1;
+ssl_session_timeout  10m;
+ssl_session_cache shared:SSL:10m;
+ssl_session_tickets off;
+ssl_stapling on;
+ssl_stapling_verify on;
+resolver 127.0.0.1 valid=300s; # I think this is the Ip address (localhost) use  Google's 8.8.8.8 8.8.4.4 if it doesn't work
+resolver_timeout 5s;
+# Disable strict transport security for now. You can uncomment the following
+# line if you understand the implications.
+#add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
+add_header X-Frame-Options DENY;
+add_header X-Content-Type-Options nosniff;
+add_header X-XSS-Protection "1; mode=block";
+```
+
+
+** Because you’re using a self-signed certificate, 
+the SSL stapling will not be used. Nginx will output a warning and 
+disable stapling for our self-signed cert, but will then continue to operate correctly.
+
+- backup current config file (SHOULD HAVE ALREADY BEEN COMPLETED BUT JUST IN CASE):
+sudo cp /etc/nginx/sites-available/yournginxconfig.conf /etc/nginx/sites-available/yournginxconfig.conf.bak
+
+- Open and adjust the Nginx configuration to enable SSL (should have been completed, but just in case).
+sudo nano /etc/nginx/sites-available/yournginxconfig.conf
+- In your existing configuration file, update the two listen statements to use a unique port (i.e. 9443) and ssl, 
+then include the two snippet files you created in previous steps:
+    server {
+        listen 9443 ssl;
+        listen [::]:9443 ssl;
+        include snippets/yoursite-self-signed.conf;
+        include snippets/ssl-params.conf;
+    }
+
+- then add a second server block AFTER THE CLOSING BRACKET } OF THE 9443 SSL SERVER BLOCK:
+
+    server {
+        error_log  /etc/nginx/sc_logs/error.log warn; # In this case, messages of warn, error crit, alert, and emerg levels are logged.
+        access_log  /etc/nginx/sc_logs/access.log; # default: access_log logs/access.log combined;
+        listen 80;
+        listen [::]:80;
+
+        server_name myownwebsite.local; # change this to sheriffcrandy.com on production
+
+        return 301 https://$server_name:9443$request_uri;
+    }
+
+
+- this redirects the server using a 301 permanent redirect from http to https
+- allow the port number you spcified for your app for your firewall:
+sudo ufw allow 9443/tcp
+
+- enable nginx changes and fix any config errors:
+sudo nginx -t
+- if you get a 
+`nginx: [emerg] open() "/etc/nginx/sc_logs/error.log" failed (2: No such file or directory)` 
+error, create the directory:
+mkdir /etc/nginx/sc_logs/
+
+- ignore this warning: 
+nginx: [warn] "ssl_stapling" ignored, issuer certificate not found for certificate "/etc/ssl/certs/nginx-your_self_signed.crt"
+
+- after ensuring there are no errors, restart nginx:
+sudo systemctl restart nginx
+
+- test server by going to your website (whatever name you made in the /etc/hosts file and nginx config server_name) 
+https://myownwebsite.local:9443
+- also go to http://myownwebsite.local to ensure nginx redirects to https
+
+- restart nginx
+sudo systemctl restart nginx
+
+- reverify website

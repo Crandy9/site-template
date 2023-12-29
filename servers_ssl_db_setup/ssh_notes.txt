@@ -1,0 +1,142 @@
+
+**** 
+	SSH into digitalocean servers: 
+****
+create ssh keys:
+ssh-keygen
+add public key ".pub" to droplet in digitalocean.com under settings
+
+- Connect to droplet:
+- First ensure droplet is turned on in digitalocean dashboard
+- Then connect to VPS from local machine terminal:
+ssh -i /home/lctec/.ssh/id_rsa_digitalocean root@128.199.184.208
+or
+ssh root@128.199.184.208
+- first time opening vps, update/upgrade packages
+sudo apt update
+sudo apt upgrade
+- exit out of terminal
+- go to digitalocean and turn off server, then turn it back on to reboot it
+
+- ssh again into server
+
+- create user lctec
+adduser lctec
+- create password and enter user info
+- add lctec to sudo group
+usermod -aG sudo lctec
+- verify sudo access, switch to lctec
+su - lctec
+- run a random sudo command:
+ex.) sudo ls -la /root
+
+- enter lctec password, not root password
+
+- close terminal again and ssh into server as root user
+- while logged in as root, 
+- enable connecting to VPS with new user (lctec) instead of default (root):
+*** the whitespace between ~/.ssh and /home/lctec is intentional **
+rsync --archive --chown=lctec:lctec ~/.ssh /home/lctec
+- exit out of terminal to disconnect from server as root
+- from local computer terminal, run:
+ssh -i /home/lctec/.ssh/id_rsa_digitalocean lctec@128.199.184.208
+or
+ssh lctec@128.199.184.208
+- if you get denied (public key error), connect to VPS via root and run:
+nano /etc/ssh/sshd_config
+- change PasswordAuthentication from no to yes
+- save ctrl-o, enter, ctrl-x 
+- reload ssh
+sudo service ssh reload
+- close out of VPS terminal, open terminal on host computer and enter:
+ssh-copy-id lctec@128.199.184.208
+- enter password you made for lctec user
+- you should receive this message on the console:
+
+"Number of key(s) added: 4
+
+Now try logging into the machine, with:   "ssh 'lctec@128.199.184.208'"
+and check to make sure that only the key(s) you wanted were added.
+"
+- then run  (you probably have to enter password everytime now)
+ssh lctec@128.199.184.208
+
+
+- in local machine, add bash script to easily ssh into VPS (not required. Just makes things easier):
+- create scripts directory:
+mkdir scripts
+- create bash script with ssh command:
+sudo nano kag-ssh-server
+#!/bin/bash
+
+# Usage: ssh into kag vps
+
+ssh lctec@128.199.184.208
+
+- save it and make it an executable
+chmod+x kag-ssh-server
+
+- add the absolute path of this file to the ~/.bashrc directory
+export PATH="$PATH:/full/path/to/your/script/directory"
+
+- restart bashrc file
+source ~/.bashrc
+
+- now you can ssh into the server easily by opening up a terminal and entering:
+kag-ssh-server
+
+
+
+
+allowing nginx and guniorn: 
+https://www.digitalocean.com/community/tutorials/ufw-essentials-common-firewall-rules-and-commands
+
+****
+
+CONNECT VPS TO GITHUB REPO:
+
+****
+ssh dir: /home/lctec/.ssh
+cd to /home/lctec and run:
+
+ssh-keygen
+give the key a name: 
+your_ssh_key_name
+
+Your identification has been saved in 
+.ssh/your_ssh_key_name
+
+Your public key has been saved in 
+.ssh/your_ssh_key_name.pub
+
+Now login to github and go to settings --> SSH and GPG Keys --> click New SSH key
+Add the .pub key to git and save
+
+* IMPORTANT *
+Add newly created private ssh keys to ssh agent so that ssh can "see" this key
+eval $(ssh-agent)
+ssh-add ~/.ssh/your_key_name
+- test ssh connection to github:
+ssh -T git@github.com
+
+Should see this (enter 'yes' for question prompt):
+
+The authenticity of host 'github.com (20.205.243.166)' can't be established.
+ED25519 key fingerprint is SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'github.com' (ED25519) to the list of known hosts.
+Hi Crandy9! You've successfully authenticated, but GitHub does not provide shell access.
+
+
+
+- if Bad owner or permissions on /home/lctec/.ssh/config error, 
+or ~/.ssh directory doesn't exist run:
+sudo chmod 700 ~/.ssh
+sudo chmod 600 ~/.ssh/*
+- try again
+- create config file:
+cd to ~/.ssh:
+touch config
+- add public key located at .ssh/your_key_name.pub to GitHub ssh keys
+use cat .ssh/your_key_name.pub to display public key for copying

@@ -1,0 +1,272 @@
+*** 
+
+
+     NGINX 
+
+https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu-22-04
+
+***
+
+- for local development (same as production, just setting up self-signed SSL certs and hostnames to simulate HTTPS environment locally)
+- go into your /etc/hosts and add your own host name you want for this website's url for local development
+
+ex.
+
+127.0.0.1    sheriffcrandymusic.local
+
+
+- setup firewall (add everything you'll need now)
+sudo ufw enable
+sudo ufw app list
+sudo ufw allow 'Nginx HTTP'
+sudo ufw allow OpenSSH
+sudo ufw allow 8000
+sudo ufw allow 'Nginx Full'
+sudo ufw allow 5432/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 80
+sudo ufw allow OpenSSHv6
+sudo ufw allow 8000v6
+sudo ufw allow 'Nginx Fullv6'
+sudo ufw allow 5432/tcpv6
+sudo ufw allow 80/tcpv6
+sudo ufw allow 443/tcpv6
+sudo ufw allow 80v6
+
+sudo ufw status
+- should display something like this:
+22/tcp                     ALLOW       Anywhere                  
+Nginx HTTP                 ALLOW       Anywhere                  
+OpenSSH                    ALLOW       Anywhere                  
+8000                       ALLOW       Anywhere                  
+Nginx Full                 ALLOW       Anywhere                  
+5432/tcp                   ALLOW       Anywhere                  
+80/tcp                     ALLOW       Anywhere                  
+443/tcp                    ALLOW       Anywhere                  
+80                         ALLOW       Anywhere                  
+22/tcp (v6)                ALLOW       Anywhere (v6)             
+Nginx HTTP (v6)            ALLOW       Anywhere (v6)             
+OpenSSH (v6)               ALLOW       Anywhere (v6)             
+8000 (v6)                  ALLOW       Anywhere (v6)             
+Nginx Full (v6)            ALLOW       Anywhere (v6)             
+5432/tcp (v6)              ALLOW       Anywhere (v6)             
+80/tcp (v6)                ALLOW       Anywhere (v6)             
+443/tcp (v6)               ALLOW       Anywhere (v6)             
+80 (v6)                    ALLOW       Anywhere (v6)   
+
+- install nginx server:
+sudo apt install nginx
+
+-set up nginx/sites-available .conf file for project (Make changes to this file when needed)
+you can name it whatever you want:
+
+sudo nano /etc/nginx/sites-available/yournginxconfig.conf
+- put this in the file:
+
+
+```
+# sheriff crandy web app nginx config
+error_log  /etc/nginx/sc_logs/error.log warn;
+access_log  /etc/nginx/sc_logs/access.log;
+
+
+upstream sheriffcrandydevgunicorn {
+    server unix:/run/sheriffcrandydevgunicorn.sock;
+}
+
+
+server {
+
+    error_log  /etc/nginx/sc_logs/error.log warn;
+    access_log  /etc/nginx/sc_logs/access.log;
+    listen      9443 ssl; # using nonstandard https port. Useful for running multiple websites locally for testing
+    listen      [::]:9443 ssl;
+    include snippets/sc-self-signed.conf; # see ssl-certs.txt
+    include snippets/ssl-params.conf; # see ssl-certs.txt
+    server_name sheriffcrandymusic.local;
+    
+    proxy_cache sheriffcrandycache;
+    proxy_cache_valid 30m;
+    add_header X-Proxy-Cache $upstream_cache_status;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    charset     utf-8;
+    client_max_body_size 75M;
+
+    # notice the '/api/' this is important for nginx to serve Django API files to vuejs app
+    location /api/media  {
+        error_log  /etc/nginx/sc_logs/error.log warn;
+        access_log  /etc/nginx/sc_logs/access.log;
+        alias /home/lctec/Desktop/sheriffcrandy_prod/sheriffcrandy_prod/backend/media/;
+        
+    }
+
+    # although the staticfiles are apart of the backend, they are not apart of the api
+    # so don't add the /api/ endpoint, just tell nginx the path to the staticfiles folder
+    location /static/ {
+        error_log  /etc/nginx/sc_logs/error.log warn;
+        access_log  /etc/nginx/sc_logs/access.log;
+        alias /home/lctec/Desktop/sheriffcrandy_prod/sheriffcrandy_prod/backend/staticfiles/;
+        
+    }
+
+    # serve vuejs frontend
+    location / {
+        error_log  /etc/nginx/sc_logs/error.log warn;
+        access_log  /etc/nginx/sc_logs/access.log;
+        root /home/lctec/Desktop/sheriffcrandy_prod/sheriffcrandy_prod/frontend/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # serve Django backend API by creating an endpoint. Can change '/api/' to whatever you want
+    # but make sure that whatever this endpoint is called, you update your
+    # python urls.py file and vuejs VUE_APP_BACKEND_URL env variable for axios, otherwise
+    # this won't be recognized by Django and/or Vue
+    location /api/ {
+        error_log  /etc/nginx/sc_logs/error.log warn;
+        access_log  /etc/nginx/sc_logs/access.log;
+        include proxy_params;
+        proxy_pass http://sheriffcrandydevgunicorn;
+    }
+}
+
+# redirect to https port 9443 if http requests are made
+server {
+    error_log  /etc/nginx/sc_logs/error.log warn;
+    access_log  /etc/nginx/sc_logs/access.log;
+    listen 80;
+    listen [::]:80;
+
+    server_name sheriffcrandymusic.local;
+
+    return 301 https://$server_name:9443$request_uri;
+}
+
+```
+
+
+
+
+
+- enable the site by creating symbolic link linking sites-available to the website:
+sudo ln -s /etc/nginx/sites-available/yournginxconfig.conf /etc/nginx/sites-enabled
+- cd to sites-enabled dir and run 
+ls -l 
+to see the symbolic link of the sites-enabled file pointing to sites-available file:
+lrwxrwxrwx 1 root root 35 Sep 21 11:24 yournginxconfig.conf -> /etc/nginx/sites-available/yournginxconfig.conf
+
+--backup current config file:
+sudo cp /etc/nginx/sites-available/yournginxconfig.conf /etc/nginx/sites-available/yournginxconfig.conf.bak
+
+AT THIS POINT, STOP AND GENERATE SELF_SIGNED SSL CERTS 
+otherwise nginx will not be able to restart
+since your ssl snippets path points to a dir that does not yet exist
+
+see *** Self-signed TLS cert (for local development):  *** (in ssl-certs.txt file)
+
+
+after that restart nginx:
+sudo systemctl restart nginx
+- if getting error
+[emerg] bind() to [::]:80 failed (98: Unknown error) 0.0.0.0:80 failed (98: Unknown error)
+
+or
+
+nginx: [emerg] bind() to 0.0.0.0:80 failed (98: Unknown error)
+
+
+
+-check if apache or port 80 is being used and stop the process that is using it:
+sudo netstat -tlnp | grep :80
+
+if it is apache2 disable it:
+sudo systemctl stop apache2
+sudo systemctl disable apache2
+
+- test nginx config syntax errors
+sudo nginx -t
+- if restarting nginx doesn't work run:
+sudo killall nginx
+- if that doesn't work, run 
+sudo fuser -k 80/tcp
+and/or 
+sudo fuser -k 443/tcp
+and/or
+sudo fuser -k 9443/tcp
+and/or
+sudo fuser -k 8443/tcp
+- if that still doesn't work run 
+sudo pkill -f nginx & wait $!
+and then 
+
+sudo systemctl start nginx
+sudo systemctl status nginx
+
+
+**** LOGGING AND TROUBLESHOOTING *****
+
+- logs found here: 
+/etc/nginx/sc_logs
+- view logs
+tail -n 5 /etc/nginx/sc_logs/access.log or 
+tail -n 5 /etc/nginx/sc_logs/error.log
+# tail logs and watch for new ones
+tail -n 5 -f /etc/nginx/sc_logs/access.log 
+or
+tail -n 5 -f /etc/nginx/sc_logs/error.log
+
+If everything is configured correctly, nginx
+and gunicorn is running, staticfiles and meida paths are correct
+and still no dice, try changing the nginx.conf file's user
+to the user you created when creating a new user and group for 
+the digitalocean's VPS
+sudo nano /etc/hosts
+
+Potential Issues:
+In production, sometimes I was getting a 403 permission denied error for 
+nginx proxy directories at 
+/var/lib/nginx/proxy/
+
+I ran 'ls-al' in the directory and saw that the user was:
+www:data rather than lctec. 
+
+I changed user and group ownersherips of proxy, as well as body, fastcgi, scgi and 
+uwsgi to lctec and saw an increase in speed and the error never returned
+
+- Related to the above issue, when restarting nginx in the production server I encountered multiple 500 errors 
+for all backend API endpoints and other Django views like the Admin page that lasts about a minute. 
+When checking the Nginx logs I saw 2 different permission denied errors, one for the cache directory at 
+/var/cache/nginx and one for the proxy directory at /var/lib/nginx/proxy which works with proxying 
+requests to the gunicorn backend server to serve the Django app.
+
+I ran `ls-al` on the /var/cache/nginx and /var/lib/nginx/proxy directories and saw the following permissions:
+drwxr-xr-x  3 root      root   4096 May  1 06:50 nginx
+drwx------ 12 lctec     root   4096 May  2 06:57 proxy
+
+
+I wasn't sure what the required permissions for this cache was so I ran the following command
+to see the Nginx ownership details:
+ps -ef | grep nginx
+
+the command returned this output:
+root      692741       1  0 03:53 ?        00:00:00 nginx: master process /usr/sbin/nginx -g daemon on; master_process on;
+lctec     692742  692741  0 03:53 ?        00:00:00 nginx: worker process
+lctec     692743  692741  0 03:53 ?        00:00:00 nginx: cache manager process
+lctec     692797  691818  0 04:00 pts/0    00:00:00 grep --color=auto nginx
+
+Notice that the worker process and the cache manager process are both owned by user lctec. So I had to change the
+owner of the /var/cache/nginx directory from root to lctec:
+sudo chown -R lctec:lctec /var/cache/nginx
+
+I then had to do the same thing for the proxy directory:
+sudo chown -R lctec:lctec /var/lib/nginx/proxy
+
+Have the Django admin page or an api endpoint open ready to refresh once nginx is restarted
+
+Then restart nginx:
+sudo systemctl restart nginx
+
+Quickly refresh the Django admin page or api endpoint and verify that it immediately updates and
+there are no more 500 errors
+
