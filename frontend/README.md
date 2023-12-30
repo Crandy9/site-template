@@ -21,7 +21,7 @@ sudo npm install -g @vue/cli
 vue --version
 
 - in main dir (enter 'ls' and you should see LICENSE, README.md, repo) create vue project:
-vue create frontend (don't do this for production)
+vue create frontend
 - Don't select a preset,
 - select manually select features with space NOT ENTER:
 Babel
