@@ -5,7 +5,7 @@ Base template for client websites. Everything is configured and ready to go with
 
 
 # Setup
-IMPORTANT: AFTER CLONING BACKEND AND ATTEMPTING TO RUN THE DEV SERVER `python manage.py runserver` it will crash because it is expecting `lctec_project`. You can leave it as is if you wanta, but if you want to customize your app and change the name (recommended) then you need to rename all instances of lctec_project to "YOUR_PROJECT_NAME" including the `lctec_project` folder
+IMPORTANT: Django is expecting `lctec_project` as the project name for the backend. So if you want to change the project name, then you need to rename all instances of `lctec_project` found in this project to `your_project_name`, including renaming the `lctec_project` main project folder. Otherwise if you rename the project and try to run the server it will crash. 
 - clone this project to your local machine somewhere, like your Desktop under a folder called `tmp`. It doesn't matter where, we are going to delete this after setup.
 - create a new git repo with a simple README.md file for your new website and clone that repo to a new folder on your local machine where this new website will live, maybe also in your desktop in a folder called `my_new_website` and put the `my_new_website` folder in a parent folder, maybe called `parent_dir`
 - Copy/paste this template project that you initially cloned to your local computer within the `my_new_website` folder you created so that your new website code won't be apart of this repo's source, as this is just a template to get things started quickly.

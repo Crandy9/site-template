@@ -9,8 +9,8 @@ TO START DEV SERVER:
 DJANGO_SETTINGS_MODULE=lctec_project.dev_settings python manage.py runserver
 
 
-access the backend at 
-127.0.0.1:8000
+access the api at
+http://localhost:8000/api/lctecadmin-6A6573757363687269737469736B696E67/login/?next=/api/lctecadmin-6A6573757363687269737469736B696E67/
 '''
 
 from .settings import * 
